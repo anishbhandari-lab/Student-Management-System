@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import ttk #It provides a set of themed widgets that offer a native look and feel
+from tkinter import messagebox
+import pymysql
 class std():
     def __init__(self, root):
         self.root=root
@@ -41,12 +43,12 @@ class std():
         x_scroll.pack(side="bottom", fill="x")
         y_scroll=tk.Scrollbar(tabFrame, orient="vertical")
         y_scroll.pack(side="right", fill="y")
-        self.table=ttk.Treeview(tabFrame, xscrollcommand=x_scroll.set, yscrollcommand=y_scroll.set, columns=("roll", "name", "father's name", "subject", "Grade"))
+        self.table=ttk.Treeview(tabFrame, xscrollcommand=x_scroll.set, yscrollcommand=y_scroll.set, columns=("roll", "name", "father name", "subject", "Grade"))
         x_scroll.config(command=self.table.xview)
         y_scroll.config(command=self.table.yview)
         self.table.heading("roll", text="Roll_no")
         self.table.heading("name", text="Name")
-        self.table.heading("father's name", text="Father's name")
+        self.table.heading("father name", text="Father name")
         self.table.heading("subject", text="Subject")
         self.table.heading("Grade", text="Grade")
         self.table["show"]="headings"
@@ -75,9 +77,68 @@ class std():
         glbl.grid(row=4, column=0, padx=20, pady=20)
         self.grade= tk.Entry(self.addFrame, width=18, font=("Arial", 15, "bold"), bd=3, bg="pink")
         self.grade.grid(row=4, column=1, padx=2, pady=8)
-        okBtn=tk.Button(self.addFrame, text="Submit", bd=3, relief="raised", font=("Arial", 15, "bold"),width=18)
-        okBtn.grid(row=5, column=0, pady=20, columnspan=3, padx=10)
+        okBtn=tk.Button(self.addFrame, command=self.addFun, text="Submit", bd=3, relief="raised", font=("Arial", 15, "bold"),width=18)
+        okBtn.grid(row=5, column=0, pady=20, columnspan=3, padx=120)
         
+    def desAdd(self):
+        self.addFrame.destroy()
+
+    def addFun(self):
+        rn = self.rollno.get()
+        name = self.Name.get()
+        fname= self.fname.get()
+        sub=self.subject.get()
+        grade=self.grade.get()
+
+        if rn and name and fname and sub and grade:
+            rNo=int(rn)
+            try:
+                self.dbfun()
+                self.cur.execute("INSERT INTO student (rollno, name, fname, sub, grade) VALUES (%s, %s, %s, %s, %s)",(rNo, name, fname, sub, grade))
+                self.con.commit()
+                tk.messagebox.showinfo("Success", f"student{name} with roll no {rNo} is Registered!")
+                self.desAdd()
+                self.cur.execute("SELECT * FROM student WHERE rollno=%s", (rNo,))
+                row=self.cur.fetchone()
+                self.table.delete(*self.table.get_children())
+                self.table.insert('', tk.END, values=row)
+                self.con.close()
+            except Exception as e:
+                tk.messagebox.showerror("Error", f"Error: {e}")
+                self.desAdd()    
+        else:
+            tk.messagebox.showerror("Error", "Please fill all the data box")
+    def searchFrameFun(self):
+        self.addFrame = tk.Frame(self.root, bd=5, relief="ridge", bg="pink")
+        self.addFrame.place(width=self.width/2.8-30, height=self.height-350, x=self.width/3-30, y=130)
+        optlbl= tk.Label(self.addFrame, text="Select:", background="pink", font=("Arial", 15, "bold"))
+        optlbl.grid(row=0, column=0, padx=20, pady=20)
+        self.option= ttk.Combobox(self.addFrame, width=17, values=("rNo", "name", "sub"), font=("Arial", 15, "bold"))
+        self.option.set("Select option")
+        self.option.grid(row=0, column=1, padx=10, pady=30)
+        vallbl= tk.Label(self.addFrame, text="Value:", background="pink", font=("Arial", 15, "bold"))
+        vallbl.grid(row=1, column=0, padx=20, pady=20)
+        self.value= tk.Entry(self.addFrame, width=18, font=("Arial", 15, "bold"), bd=3, bg="pink")
+        self.value.grid(row=1, column=1, padx=2, pady=8)
+        okBtn=tk.Button(self.addFrame, command=self.addFun, text="Submit", bd=3, relief="raised", font=("Arial", 15, "bold"),width=18)
+        okBtn.grid(row=5, column=0, pady=20, columnspan=3, padx=120)
+    def searchFun(self):
+        opt=self.option.get()
+        val=self.value.get()
+        if opt == "rollNo":
+            rn=int(val)
+            try:
+                self.dbfun()
+                self.cur.execute("select * From student where rollNo=%s",rn)
+                row=self.cur.fetchone()
+                self.table.delete(*self.table.get_children())
+                self.table.insert('', tk.END, values=row)
+                self.desAdd()
+            except Exception as e:
+                tk.messagebox.showerror("Error", f"Error:{e}")
+    def dbfun(self):
+        self.con=pymysql.connect(host="localhost", user="root", password="anish9843", database="project")
+        self.cur = self.con.cursor()
 root = tk.Tk()
 obj= std(root)
 root.mainloop()
